@@ -1,0 +1,8 @@
+pdfplumber
+docx2txt
+mammoth
+python-docx
+"unstructured[all-docs]"
+apt-get update
+apt-get install -y poppler-utils
+unstructured[pdf,docx] unstructured-inference torch detectron2@git+https://github.com/facebookresearch/detectron2.git@v0.6#egg=detectron2
