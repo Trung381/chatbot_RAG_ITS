@@ -33,8 +33,8 @@ def convert_docx_to_html(docx_path, output_path):
 # --- Cách sử dụng ---
 if __name__ == "__main__":
     # Thay đổi tên file cho phù hợp với bạn
-    input_file = "document_formatted/gan_chuan_formatted_v4.docx"
-    output_file = "document_formatted/gan_chuan_formatted_v4.html"
+    input_file = "document_formatted/gan_chuan_formatted_fixed.docx"
+    output_file = "document_formatted/gan_chuan_formatted_fixed.html"
 
     # Gọi hàm để thực hiện chuyển đổi
     convert_docx_to_html(input_file, output_file)
