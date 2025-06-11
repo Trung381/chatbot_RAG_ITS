@@ -80,7 +80,7 @@ def analyze_paragraph(para):
 
     # **ƯU TIÊN 3: HEADING DẠNG CHỮ, KHÔNG ĐÁNH SỐ**
     # Ngưỡng 15 từ là hợp lý để tránh các đoạn văn dài được in đậm
-    if is_paragraph_bold(para) and len(text.split()) < 15:
+    if is_paragraph_bold(para) and len(text.split()) < 50:
         level = 1 if text.isupper() else 2
         return 'heading', level, text
 
@@ -106,7 +106,10 @@ def format_document_ordered(input_path, output_path):
     for block in iter_block_items(doc):
         # A. XỬ LÝ NẾU KHỐI LÀ ĐOẠN VĂN (PARAGRAPH)
         if isinstance(block, Paragraph):
-            para_type, level, content = analyze_paragraph(block)
+            if (block.style.name.__contains__('Heading')):
+                para_type, level, content = 'heading', 1, block.text.strip()
+            else:
+                para_type, level, content = analyze_paragraph(block)
 
             if para_type == 'heading':
                 new_doc.add_heading(content, level=level)
@@ -129,10 +132,11 @@ def format_document_ordered(input_path, output_path):
     new_doc.save(output_path)
 
 # --- CÁCH SỬ DỤNG ---
+FILE_NAME = 'test1'
 try:
     # Hãy đảm bảo đường dẫn file là chính xác
-    input_file = 'document/gan_chuan.docx'
-    output_file = 'document_formatted/gan_chuan_formatted_fixed.docx'
+    input_file = f'document/{FILE_NAME}.docx'
+    output_file = f'document_formatted/{FILE_NAME}.docx'
     format_document_ordered(input_file, output_file)
     print(f"Hoàn tất định dạng tài liệu thành công! File đã được lưu tại: {output_file}")
 except FileNotFoundError:
