@@ -5,6 +5,15 @@ from docx.oxml.text.paragraph import CT_P
 from docx.oxml.table import CT_Tbl
 from docx.text.paragraph import Paragraph
 from docx.table import Table
+from enum import Enum
+
+class ParagraphType(Enum):
+    HEADING = "heading"
+    NORMAL = "normal"
+    QUOTE = "quote"
+    EMPTY = "empty"
+    LIST = "list"
+
 
 # --- CÁC HÀM XỬ LÝ LOGIC ---
 
@@ -36,13 +45,13 @@ def analyze_paragraph(para):
     """
     text = para.text.strip()
     if not text:
-        return 'empty', None, None
+        return ParagraphType.EMPTY, None, None
 
     # **ƯU TIÊN 1: KIỂM TRA DANH SÁCH TỰ ĐỘNG**
     # Kiểm tra sự tồn tại của thuộc tính numbering trong XML của paragraph.
     is_auto_list = False
     try:
-        if para._p.pPr.numPr:
+        if para._p.pPr.numPr is not None:
             is_auto_list = True
     except AttributeError:
         is_auto_list = False
@@ -57,9 +66,9 @@ def analyze_paragraph(para):
                 if level > 6: level = 6 # Giới hạn heading level
             except AttributeError:
                 level = 2 # Nếu không lấy được, mặc định là level 2 cho các mục con in đậm
-            return 'heading', level, text
+            return ParagraphType.HEADING, level, text
         else:
-            return 'list', None, text
+            return ParagraphType.LIST, None, text
 
     # **ƯU TIÊN 2: KIỂM TRA HEADING/LIST GÕ THỦ CÔNG (DÙNG REGEX)**
     # Logic này chỉ chạy khi không phải là danh sách tự động, lúc này para.text đáng tin cậy.
@@ -75,23 +84,23 @@ def analyze_paragraph(para):
         
         # Nếu là heading cấp 1 gõ tay, vẫn cần in đậm để xác nhận
         if level == 1 and not is_paragraph_bold(para):
-            return 'list', None, text # Coi là list item nếu không in đậm
-        return 'heading', level, clean_text
+            return ParagraphType.LIST, None, text # Coi là list item nếu không in đậm
+        return ParagraphType.HEADING, level, clean_text
 
     # **ƯU TIÊN 3: HEADING DẠNG CHỮ, KHÔNG ĐÁNH SỐ**
     # Ngưỡng 15 từ là hợp lý để tránh các đoạn văn dài được in đậm
     if is_paragraph_bold(para) and len(text.split()) < 50:
         level = 1 if text.isupper() else 2
-        return 'heading', level, text
+        return ParagraphType.HEADING, level, text
 
     # **ƯU TIÊN 4: LIST GÕ THỦ CÔNG DẠNG KÝ TỰ**
     # Pattern cho list: *, -, a., i.
     list_pattern = re.compile(r'^((\w\.|[ivx]+\.)|([*\-•]))\s', re.I)
     if list_pattern.match(text):
-        return 'list', None, text
+        return ParagraphType.LIST, None, text
 
     # **MẶC ĐỊNH: VĂN BẢN THƯỜNG**
-    return 'normal', None, text
+    return ParagraphType.NORMAL, None, text
 
 
 # --- LOGIC XỬ LÝ CHÍNH ---
@@ -107,17 +116,17 @@ def format_document_ordered(input_path, output_path):
         # A. XỬ LÝ NẾU KHỐI LÀ ĐOẠN VĂN (PARAGRAPH)
         if isinstance(block, Paragraph):
             if (block.style.name.__contains__('Heading')):
-                para_type, level, content = 'heading', 1, block.text.strip()
+                para_type, level, content = ParagraphType.HEADING, 1, block.text.strip()
             else:
                 para_type, level, content = analyze_paragraph(block)
 
-            if para_type == 'heading':
+            if para_type == ParagraphType.HEADING:
                 new_doc.add_heading(content, level=level)
-            elif para_type == 'list':
+            elif para_type == ParagraphType.LIST:
                 # Làm sạch ký tự đầu dòng nếu có (cho trường hợp gõ tay)
                 clean_content = re.sub(r'^((\d+\.|\w\.|[ivx]+\.)|([*\-•]))\s*', '', content, re.I).strip()
                 new_doc.add_paragraph(clean_content, style='List Bullet')
-            elif para_type == 'normal':
+            elif para_type == ParagraphType.NORMAL:
                 new_doc.add_paragraph(content, style='Normal')
             # Bỏ qua para_type == 'empty'
 
