@@ -18,7 +18,7 @@ STT | Name | Date of birth | Address
 1   | John | 20/01/2000    | Hanoi
 2   | Jane | 21/02/2001    | Haiphong
 
-string output: "STT: 1, Name: John, Date of birth: 20/01/2000, Address: Hanoi\nSTT: 2, Name: Jane, Date of birth: 21/02/2001, Address: Haiphong"
+string output: [TABLE]STT: 1, Name: John, Date of birth: 20/01/2000, Address: Hanoi\n[TABLE]STT: 2, Name: Jane, Date of birth: 21/02/2001, Address: Haiphong"
 
 best practice cho string output:
 - header: value rõ ràng
