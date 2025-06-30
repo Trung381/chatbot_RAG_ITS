@@ -5,60 +5,116 @@
 !pip install python-dotenv
 '''
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import JsonOutputParser
 from operator import itemgetter
-import os
 from dotenv import load_dotenv
+import os
+
+guide = '''
+  {
+    "titleId": f9c914bbe5fe7cce8avjfkdkdkdkdkd,
+    "title": "Tài liệu ôn tập", //Tên tài liệu
+    "content": "",
+    "children": [
+        {
+            "titleId": "f9c914bbe5fe7cce8abde153f607eaea", //ID duy nhất
+            "title": "Chương 1: Giới thiệu về Lập trình hướng đối tượng",
+            "content": "",
+            "children": [
+                {
+                    "titleId": "ab2c809cc6f2cd1f114dd9fddbdae7b2",
+                    "title": "1.1. Khái niệm cơ bản",
+                    "content": "",
+                    "children": [
+                        {
+                            "titleId": "b733d164cde1383eb28bbe4c59316a52",
+                            "title": "1.1.1. Tính đóng gói (Encapsulation)",
+                            "content": "",
+                            "children": []
+                        },
+                        {
+                            "titleId": "b30dc5276f6ca1380c3b57c0102127ea",
+                            "title": "1.1.2. Tính thừa kế (Inheritance)",
+                            "content": "",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "titleId": "c1d5a4449713cf436eead4a8daa4dbd4",
+                    "title": "1.2. Lợi ích của OOP",
+                    "content": "",
+                    "children": []
+                }
+            ]
+        },
+        {
+            "titleId": "b6798fbfc64e0ae5d67b04cb44f3a15a",
+            "title": "Chương 2: Các ngôn ngữ lập trình hỗ trợ OOP",
+            "content": "",
+            "children": [
+                {
+                    "titleId": "146b463d45027036347b0458e8145fa8",
+                    "title": "2.2. C++",
+                    "content": "",
+                    "children": []
+                }
+            ]
+        },
+        {
+            "titleId": "a689649acc0d84b53319f408cb8bce62",
+            "title": "Chương 3: Kết luận",
+            "content": "",
+            "children": []
+        }
+    ]
+  }
+'''
 
 load_dotenv()
 
-structure_guide = '''
-        {
-            "roots": ["d95624..."],  // danh sách id của các nút gốc
-            "nodes": {
-                "d95624...": {
-                    "id": "d95624...",
-                    "text": "TIÊU ĐỀ CHÍNH...",
-                    "childrens": ["f9c914...", "ab2c80...", "f3ac81..."] // danh sách id của các nút con
-                },
-                "ab2c80...": {
-                  "id": "ab2c80...",
-                  "text": "PHẦN A...",
-                  "childrens": ["b733d1...", "a68964..."]
-                },
-                ...
-            }
-        }
-    '''
-
 def format_prompt(raw_data):
     prompt = (
-        "Bạn là một trợ lý thông minh giúp cấu trúc lại dữ liệu tiếng Việt được cung cấp theo yêu cầu.\n"
-        '''Bạn được cung cấp dữ liệu dạng json, trong đó mỗi key là một id duy nhất và value tương ứng là một đề mục có trong tài liệu pdf hoặc docx, các cặp key-value đã sắp xếp theo thứ tự từ trên xuống của các đề mục như trong tài liệu gốc.
-        Ở mỗi đề mục sẽ đánh hoặc không đánh đề mục, nếu có thì có thể là số, chữ cái hoặc số la mã và có thể có sự phân cấp.\n'''
-        f"Nhiệm vụ của bạn là chuyển đổi dữ liệu được cung cấp thành cấu trúc dạng tree + flat map với cấu trúc như sau: ```{structure_guide}```.  Tiêu chí dùng để đánh giá và sắp xếp các đề mục có quan hệ với nhau là cách phân cấp đề mục nếu có, sự liên quan của các đề mục.\n"
-        f"Dữ liệu cần định dạng lại cấu trúc: ```{raw_data}``` và định dạng đầu ra mong đợi như sau:\n"
-        '''
-        ```<Câu trả lời>```
-        '''
+        """
+        Bạn là một trợ lý thông minh chuyên cấu trúc, phân cấp lại dữ liệu tiếng Việt.\n
+        Bạn được cung cấp dữ liệu là tập các tiêu đề có trong tài liệu DOCX hoặc PDF với cấu trúc ban đầu giống như 1 dictionary trong python, trong đó:\n
+            - Key: Mỗi key là một ID duy nhất giúp phân biệt các tiêu đề\n
+            - Value: Mỗi value là một tiêu đề ứng với key tương ứng\n
+        Lưu ý rằng các tiêu đề có thể được đánh hoặc không đánh số đề mục, nếu được đánh đề mục thì có thể là số, chữ cái hoặc số la mã, ví dụ như '1', '1.2.1', 'a', 'II', 'A',...
+        """
+        f"Nhiệm vụ của bạn là phân tích, đánh giá tập dữ liệu được cung cấp và chuyển dữ liệu đó thành dữ liệu có cấu trúc như sau: ```{guide}```.\n"
+        """
+        Trong đó:\n
+            - titleId: ID duy nhất của mỗi đề mục Với titleId đầu tiên thì title tương ứng là tên của tài liệu
+            - title: Tên của đề mục
+            - content: Nội dung của đề mục, luôn để giá trị trống
+            - children: Danh sách các đề mục con, rỗng nếu không có đề mục con
+        """
+        """
+        Tiêu chí dùng để đánh giá và cấu trúc lại dữ liệu có thể gồm:\n
+            - Cách phân cấp đề mục
+            - Sự liên quan giữa các đề mục
+        """
+        f"Dữ liệu cần cấu trúc lại như sau: ```{raw_data}``` và định dạng đầu ra mong đợi là: ```<Câu trả lời>```"
     )
 
     return {"prompt": prompt}
 
-def build_chain():
-    api_key = os.getenv("GOOGLE_API_KEY")
-    model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.5, api_key=api_key)
+def build_chain() -> dict:
+    api_key = os.getenv("OPEN_AI_KEY")
+    model = ChatOpenAI(model="gpt-4o", temperature=0.5, api_key=api_key)
     chain = (
         RunnableLambda(format_prompt)
         | itemgetter('prompt')
         | model
-        | JsonOutputParser()
+        | JsonOutputParser() #Parse response thành kiểu DICT
     )
 
     return chain
 
+# Call ChatGPT để sắp xếp lại đề mục
 def restructure(raw_data) -> dict:
     chain = build_chain()
     return chain.invoke(raw_data)
