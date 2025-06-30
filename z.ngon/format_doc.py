@@ -164,7 +164,7 @@ def format_document_ordered(input_path, output_path):
     new_doc.save(output_path) 
 
 # --- CÁCH SỬ DỤNG --- 
-FILE_NAME = 'gan_chuan' 
+FILE_NAME = 'test' 
 try: 
     # Hãy đảm bảo đường dẫn file là chính xác 
     input_file = f'document/{FILE_NAME}.docx' 
